@@ -1,0 +1,362 @@
+Imports System
+Imports System.IO.Ports
+Imports System.ComponentModel
+Imports System.Runtime.InteropServices
+Imports Microsoft.Win32
+Imports System.Net.Sockets
+Imports System.Text
+
+
+
+Public Class Form1
+    Inherits System.Windows.Forms.Form ' do kamerki
+    Dim serverSocket As New TcpListener(1078)
+    Dim clientSocket As TcpClient
+    Dim serverSocket2 As New TcpListener(1028)
+    Dim clientSocket2 As TcpClient
+    Dim wyslijrozmiarobrazka As Boolean = True
+    'timer1 -> wysylanie bluetooth
+    'timer2 -> odbieranie polecen z neta
+    'timer3 -> wysylanie obrazu
+    Dim znak As String
+    Dim flaga As Boolean
+    Dim koniec As Boolean
+    Dim wysylaj As Boolean = False
+
+    'do kamerki
+    Const WM_CAP_START = &H400S
+    Const WS_CHILD = &H40000000
+    Const WS_VISIBLE = &H10000000
+    Const WM_CAP_DRIVER_CONNECT = WM_CAP_START + 10
+    Const WM_CAP_DRIVER_DISCONNECT = WM_CAP_START + 11
+    Const WM_CAP_EDIT_COPY = WM_CAP_START + 30
+    Const WM_CAP_SEQUENCE = WM_CAP_START + 62
+    Const WM_CAP_FILE_SAVEAS = WM_CAP_START + 23
+    Const WM_CAP_SET_SCALE = WM_CAP_START + 53
+    Const WM_CAP_SET_PREVIEWRATE = WM_CAP_START + 52
+    Const WM_CAP_SET_PREVIEW = WM_CAP_START + 50
+    Const SWP_NOMOVE = &H2S
+    Const SWP_NOSIZE = 1
+    Const SWP_NOZORDER = &H4S
+    Const HWND_BOTTOM = 1
+
+
+    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        wlaczserwer()
+    End Sub
+    Sub msg(ByVal mesg As String)
+        TextBox1.Text = mesg
+    End Sub
+    Sub steruj(ByVal polecenie As String)
+        znak = polecenie
+        TextBox1.Text = znak
+        Timer1.Enabled = True
+    End Sub
+    Sub bluetoothwl()
+        _SerialPort1.Open()
+        If _SerialPort1.IsOpen Then
+            flaga = True
+            Label2.Text = "Bluetooth polaczony"
+            Timer1.Enabled = True
+            Button2.Enabled = True
+            znak = "s"
+        Else
+            flaga = False
+            Label2.Text = "bluetooth niepolaczony"
+            Timer1.Enabled = False
+        End If
+    End Sub
+    Sub wlaczserwer()
+        Label3.Text = "Wlaczanie serwera..."
+        serverSocket.Start()
+        Label3.Text = "Serwer wlaczony"
+        clientSocket = serverSocket.AcceptTcpClient()
+        Label3.Text = "Nawiazano polaczenie..."
+        serverSocket2.Start()
+        clientSocket2 = serverSocket2.AcceptTcpClient()
+        If clientSocket.Connected Then
+            ' bluetoothwl()
+            '  Timer3.Enabled = True
+            TextBox1.Text = "Polaczono"
+            koniec = True
+            Timer2.Enabled = True
+            'Timer3.Enabled = True 'timer do wysylania obrazu
+            TrackBar1.Enabled = True
+        End If
+
+    End Sub
+    Sub wylaczserwer()
+        serverSocket2.Stop()
+        clientSocket2.Close()
+        Timer3.Enabled = False
+        bluetoothwyl()
+        serverSocket.Stop()
+        clientSocket.Close()
+        Label3.Text = "polaczenie zakonczone"
+
+    End Sub
+    Sub bluetoothwyl()
+        Timer1.Enabled = False
+        _SerialPort1.Close()
+        Label2.Text = "Bluetooth Rozlaczony"
+    End Sub
+    Sub zmienPWM()
+        If TrackBar1.Value = 255 Then
+            TrackBar1.Value -= 1
+        End If
+        Timer1.Enabled = False
+        _SerialPort1.Write("c")
+        '   MsgBox("zmieniono PWM na: " & TrackBar1.Value)
+        _SerialPort1.Write(Chr(TrackBar1.Value / 2))
+        znak = "s"
+        ' Timer1.Enabled = True
+
+    End Sub
+    Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles Timer1.Tick
+        _SerialPort1.Write(znak)
+    End Sub
+    Private Sub Timer2_Tick(sender As Object, e As EventArgs) Handles Timer2.Tick
+        If koniec Then
+            Try
+                Dim networkStream As NetworkStream = _
+                        clientSocket.GetStream()        'przechwytuje stream
+                Dim bytesFrom(10024) As Byte
+                networkStream.Read(bytesFrom, 0, CInt(clientSocket.ReceiveBufferSize)) 'Czyta ze stream(tekst(bity), 0, rozmiar tekstu
+                Dim dataFromClient As String = _
+                        System.Text.Encoding.ASCII.GetString(bytesFrom) 'zamienia bity na tekst
+                dataFromClient = _
+            dataFromClient.Substring(0, dataFromClient.IndexOf("$"))
+
+
+
+                If dataFromClient = "rozlacz" Then
+                    koniec = False
+                End If
+
+                steruj(dataFromClient) 'Sterowanie robotem
+
+            Catch ex As Exception
+                MsgBox(ex.ToString)
+            End Try
+
+            Dim im As Image
+            Dim obrazim As Image
+            Dim gr As Graphics
+            Dim obrazbyte() As Byte
+
+            im = GetFormImage()
+            obrazbyte = Image2ByteArray(im, System.Drawing.Imaging.ImageFormat.Bmp)
+
+            Dim networkStream2 As NetworkStream = clientSocket2.GetStream()
+            networkStream2.Write(obrazbyte, 0, obrazbyte.Length)
+            networkStream2.Flush()
+
+        Else
+            wylaczserwer()
+        End If
+    End Sub
+    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+        zmienPWM()
+    End Sub
+    Private Sub TrackBar1_ValueChanged(sender As Object, e As EventArgs) Handles TrackBar1.ValueChanged
+        Label1.Text = (TrackBar1.Value / 255 * 100) & "%"
+        Button1.Enabled = True
+    End Sub
+    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
+        bluetoothwl()
+    End Sub
+
+    '--The capGetDriverDescription function retrieves the version 
+    ' description of the capture driver--
+    Declare Function capGetDriverDescriptionA Lib "avicap32.dll" _
+    (ByVal wDriverIndex As Short, _
+    ByVal lpszName As String, ByVal cbName As Integer, _
+    ByVal lpszVer As String, _
+    ByVal cbVer As Integer) As Boolean
+
+    '--The capCreateCaptureWindow function creates a capture window--
+    Declare Function capCreateCaptureWindowA Lib "avicap32.dll" _
+    (ByVal lpszWindowName As String, ByVal dwStyle As Integer, _
+    ByVal x As Integer, ByVal y As Integer, ByVal nWidth As Integer, _
+    ByVal nHeight As Short, ByVal hWnd As Integer, _
+    ByVal nID As Integer) As Integer
+
+    '--This function sends the specified message to a window or windows--
+    Declare Function SendMessage Lib "user32" Alias "SendMessageA" _
+    (ByVal hwnd As Integer, ByVal Msg As Integer, _
+    ByVal wParam As Integer, _
+    <MarshalAs(UnmanagedType.AsAny)> ByVal lParam As Object) As Integer
+
+    '--Sets the position of the window relative to the screen buffer--
+    Declare Function SetWindowPos Lib "user32" Alias "SetWindowPos" _
+    (ByVal hwnd As Integer, _
+    ByVal hWndInsertAfter As Integer, ByVal x As Integer, _
+    ByVal y As Integer, _
+    ByVal cx As Integer, ByVal cy As Integer, _
+    ByVal wFlags As Integer) As Integer
+
+    '--This function destroys the specified window--
+    Declare Function DestroyWindow Lib "user32" _
+    (ByVal hndw As Integer) As Boolean
+
+    '---used to identify the video source---
+    Dim CamSource As Integer
+
+    '---used as a window handle---
+    Dim hWnd As Integer
+
+    Private Declare Auto Function BitBlt Lib "gdi32.dll" (ByVal _
+    hdcDest As IntPtr, ByVal nXDest As Integer, ByVal _
+    nYDest As Integer, ByVal nWidth As Integer, ByVal _
+    nHeight As Integer, ByVal hdcSrc As IntPtr, ByVal nXSrc _
+    As Integer, ByVal nYSrc As Integer, ByVal dwRop As  _
+    System.Int32) As Boolean
+    Private Const SRCCOPY As Integer = &HCC0020
+
+    'przesylanie obrazu
+
+    Private Function GetFormImage() As Bitmap
+        ' Get this form's Graphics object.
+        Dim me_gr As Graphics = Me.CreateGraphics
+
+        ' Make a Bitmap to hold the image.
+        Dim bm As New Bitmap(320, 240, me_gr)
+        Dim bm_gr As Graphics = me_gr.FromImage(bm)
+        Dim bm_hdc As IntPtr = bm_gr.GetHdc
+
+        ' Get the form's hDC. We must do this after 
+        ' creating the new Bitmap, which uses me_gr.
+        Dim me_hdc As IntPtr = me_gr.GetHdc
+
+        ' BitBlt the form's image onto the Bitmap.
+        BitBlt(bm_hdc, 0, 0, 320, 240, _
+            me_hdc, 36, 116, SRCCOPY)
+        me_gr.ReleaseHdc(me_hdc)
+        bm_gr.ReleaseHdc(bm_hdc)
+
+        ' Return the result.
+        Return bm
+    End Function
+
+
+    Private Sub cameraSource()
+        Dim DriverName As String = Space(80)
+        Dim DriverVersion As String = Space(80)
+        For i As Integer = 0 To 9
+            If capGetDriverDescriptionA(i, DriverName, 80, _
+            DriverVersion, 80) Then
+                ListBox1.Items.Add(DriverName.Trim)
+            End If
+        Next
+    End Sub
+
+    Private Sub previewCamera(ByVal pbCtrl As PictureBox)
+        hWnd = capCreateCaptureWindowA(CamSource, _
+        WS_VISIBLE Or WS_CHILD, 0, 0, 0, _
+        0, pbCtrl.Handle.ToInt32, 0)
+        If SendMessage( _
+        hWnd, WM_CAP_DRIVER_CONNECT, _
+        CamSource, 0) Then
+            '---set the preview scale---
+            SendMessage(hWnd, WM_CAP_SET_SCALE, True, 0)
+            '---set the preview rate (ms)---
+            SendMessage(hWnd, WM_CAP_SET_PREVIEWRATE, 30, 0)
+            '---start previewing the image---
+            SendMessage(hWnd, WM_CAP_SET_PREVIEW, True, 0)
+            '---resize window to fit in PictureBox control---
+            SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, _
+            pbCtrl.Width, pbCtrl.Height, _
+            SWP_NOMOVE Or SWP_NOZORDER)
+        Else
+            '--error connecting to video source---
+            DestroyWindow(hWnd)
+        End If
+    End Sub
+
+    Private Sub stopPreviewCamera()
+        SendMessage(hWnd, WM_CAP_DRIVER_DISCONNECT, CamSource, 0)
+        DestroyWindow(hWnd)
+    End Sub
+
+    Private Sub Form1_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
+        cameraSource()
+    End Sub
+
+    Private Sub ListBox1_DoubleClick(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles ListBox1.DoubleClick
+        previewCamera(PictureBox1)
+    End Sub
+
+    Private Sub ListBox1_SelectedIndexChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles ListBox1.SelectedIndexChanged
+        CamSource = ListBox1.SelectedIndex
+        '---preview the selected video source
+    End Sub
+
+    Private Sub ComboBox1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox1.SelectedIndexChanged
+        _SerialPort1.PortName = ComboBox1.SelectedItem
+    End Sub
+
+    'Private Function BytesToImage(ByVal ImageBytes() As Byte) As Image
+    '    Dim imgNew As Image
+    '    Dim memImage As New System.IO.MemoryStream(ImageBytes)
+    '    imgNew = Image.FromStream(memImage)
+    '    Return imgNew
+    'End Function
+
+    'Private Function ImageToBytes(ByVal Image As Image) As Byte()
+    '    Dim memImage As New System.IO.MemoryStream
+    '    Dim bytImage() As Byte
+
+    '    Image.Save(memImage, Image.RawFormat)
+    '    bytImage = memImage.GetBuffer()
+
+    '    Return bytImage
+    'End Function
+
+    Public Function Image2ByteArray(ByVal Bild As Image, ByVal Bildformat As System.Drawing.Imaging.ImageFormat) As Byte()
+        Dim MS As New IO.MemoryStream
+        Bild.Save(MS, Bildformat) ' zapisywanie do strumienia
+        MS.Flush()
+        Return MS.ToArray   'zwraca strumien jako tablice
+    End Function
+
+    Public Function ByteArray2Image(ByVal ByAr() As Byte) As Image
+        Dim img As Image
+        Dim MS2 As New IO.MemoryStream(ByAr)
+
+        'das TRY ist Notwending, da wenn ein ARRAY eingelesen wird, welches KEIN Bild war,
+        'eine Exception auftritt!
+        Try
+            img = Image.FromStream(MS2) ' zapisuje obrazek z strumienia
+        Catch ex As Exception
+            Return Nothing
+        End Try
+
+        Return img  'zwraca obrazek
+    End Function
+
+
+    Private Sub Timer3_Tick(sender As Object, e As EventArgs) Handles Timer3.Tick
+        Dim im As Image
+        Dim obrazim As Image
+        Dim gr As Graphics
+        Dim obrazbyte() As Byte
+
+        im = GetFormImage()
+        obrazbyte = Image2ByteArray(im, System.Drawing.Imaging.ImageFormat.Bmp)
+
+        Dim networkStream As NetworkStream = clientSocket2.GetStream()
+        networkStream.Write(obrazbyte, 0, obrazbyte.Length)
+        networkStream.Flush()
+
+    End Sub
+
+    Private Sub Button4_Click(sender As Object, e As EventArgs) Handles Button4.Click
+        serverSocket2.Start()
+        clientSocket2 = serverSocket2.AcceptTcpClient()
+        If clientSocket2.Connected Then
+            Label6.Text = "Polaczono"
+            Timer3.Enabled = True 'timer do wysylania obrazu
+        End If
+    End Sub
+
+End Class
