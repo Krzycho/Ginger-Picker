@@ -1,0 +1,382 @@
+'Activity module
+Sub Process_Globals
+  'These global variables will be declared once when the application starts.
+	'These variables can be accessed from all modules.
+
+End Sub
+
+Sub Globals
+	'These global variables will be redeclared each time the activity is created.
+	'These variables can only be accessed from this module.
+	Dim Adapter As Serial
+	Dim znak As Char
+	Dim Button1 As Button
+	Dim Button2 As Button
+	Dim Button3 As Button
+	Dim Button4 As Button
+	Dim Button5 As Button
+	Dim Button6 As Button
+	Dim Button7 As Button
+	Dim Button8 As Button
+	Dim Button9 As Button
+	Dim Label1 As Label
+	Dim SeekBar1 As SeekBar
+	Dim CheckBox1 As CheckBox
+	Dim CheckBox2 As CheckBox
+	Dim CheckBox3 As CheckBox
+	Dim Flaga As Boolean
+	Dim Timer1 As Timer
+	Dim Timer2 As Timer
+	Dim Timer3 As Timer
+	Dim TextWriter1 As TextWriter
+	znak = "0"
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Activity.Title = "Sterowanie"
+	Activity.LoadLayout("aplikacja2")
+	Label1.Height=Activity.Height/7
+	Label1.Width=Activity.Width/3*2
+	Label1.Top=0
+	Label1.Left=0
+	Label1.Text=0
+	Label1.Gravity = Gravity.CENTER_HORIZONTAL + Gravity.CENTER_VERTICAL
+	
+	Button9.Height=Activity.Height/7
+	Button9.Width=Activity.Width/3*1
+	Button9.Top=0
+	Button9.Left=Activity.Width/3*2
+	Button9.Enabled=False
+	Button9.Text="Zatwierdz"
+	
+	SeekBar1.Height=Activity.Height/7
+ 	SeekBar1.Width=Activity.Width/7*5
+	SeekBar1.Top=(Activity.Height/7)*1
+	SeekBar1.Left=Activity.Width/7
+	SeekBar1.Max=255 
+	SeekBar1.Value=0
+	SeekBar1.Enabled=False
+	
+	Button1.Text="Prosto"
+	Button1.Width = Activity.Width/5
+	Button1.Height = (Activity.Height/4)
+	Button1.Top=(Activity.Height/7)*2
+	Button1.Left=Activity.Width/8*4
+	Button1.Enabled=False
+	
+	Button2.Text="W lewo"
+	Button2.Width = Activity.Width/5
+	Button2.Height = (Activity.Height/4)
+	Button2.Top=(Activity.Height/7)*4
+	Button2.Left=Activity.Width/8*2
+	Button2.Enabled=False
+	
+	Button3.Text="W prawo"
+	Button3.Width = Activity.Width/5
+	Button3.Height = (Activity.Height/4)
+	Button3.Top=(Activity.Height/7)*4
+	Button3.Left=Activity.Width/8*6
+	Button3.Enabled=False
+	
+	Button4.Text="Wstecz"
+	Button4.Width = Activity.Width/5
+	Button4.Height = (Activity.Height/4)
+	Button4.Top=(Activity.Height/7)*4
+	Button4.Left=Activity.Width/8*4
+	Button4.Enabled=False
+	
+	Button5.Text="Do gory"
+	Button5.Width = Activity.Width/5
+	Button5.Height = (Activity.Height/4)
+	Button5.Top=(Activity.Height/7)*2
+	Button5.Left=Activity.Width/8*4
+	Button5.Enabled=False
+	Button5.Visible=False
+	
+	Button6.Text="Chwyc"
+	Button6.Width = Activity.Width/5
+	Button6.Height = (Activity.Height/4)
+	Button6.Top=(Activity.Height/7)*4
+	Button6.Left=Activity.Width/8*2
+	Button6.Enabled=False
+	Button6.Visible=False
+	
+	Button7.Text="Pusc"
+	Button7.Width = Activity.Width/5
+	Button7.Height = (Activity.Height/4)
+	Button7.Top=(Activity.Height/7)*4
+	Button7.Left=Activity.Width/8*6
+	Button7.Enabled=False
+	Button7.Visible=False
+	
+	Button8.Text="Na dol"
+	Button8.Width = Activity.Width/5
+	Button8.Height = (Activity.Height/4)
+	Button8.Top=(Activity.Height/7)*4
+	Button8.Left=Activity.Width/8*4
+	Button8.Enabled=False
+	Button8.Visible=False
+	
+	Adapter.Initialize("Adapter")
+	
+	CheckBox1.Top=(Activity.Height/7)*6
+	CheckBox1.Left=Activity.Width/10*4
+	CheckBox1.Checked=True
+	CheckBox1.Enabled=False
+	
+	CheckBox2.Top=(Activity.Height/7)*6
+	CheckBox2.Left=Activity.Width/10*7
+	CheckBox2.Checked=False
+	CheckBox2.Enabled=False
+	
+	
+	CheckBox3.Top=(Activity.Height/7)*3
+	CheckBox3.Left=Activity.Width/10
+	CheckBox3.Checked=False
+	
+	Timer1.Initialize("Timer1", 100) ' Sprawdza czy polaczono z modulem
+ 	Timer1.Enabled=True
+	
+	Timer2.Initialize("Timer2", 100) 'Timer do sprawdzania czy bluetooth wlaczony
+ 	Timer2.Enabled=True
+
+	Timer3.Initialize("Timer3", 100) 'wysylajacy dane
+ 	Timer3.Enabled=True
+End Sub
+
+Sub Timer2_Tick
+
+ If Adapter.IsEnabled = True Then
+ CheckBox3.Enabled = True
+ Else
+ CheckBox3.Enabled = False
+ End If
+  
+End Sub
+Sub Timer3_Tick
+
+If Flaga=True Then
+  Try
+   TextWriter1.Write(znak)
+   TextWriter1.Flush
+  Catch
+   Flaga=False
+  End Try
+ End If
+
+End Sub
+
+Sub Activity_Resume
+
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+
+End Sub
+
+ Sub Timer1_Tick
+
+  If Flaga Then
+  	Button1.Enabled=True
+	Button2.Enabled=True
+	Button3.Enabled=True
+	Button4.Enabled=True
+	SeekBar1.Enabled=True
+	CheckBox1.Enabled=True
+	CheckBox2.Enabled=True
+Else
+	Button1.Enabled=False
+	Button2.Enabled=False
+	Button3.Enabled=False
+	Button4.Enabled=False
+	SeekBar1.Enabled=False
+	CheckBox1.Enabled=False
+	CheckBox2.Enabled=False
+	End If
+
+End Sub
+
+Sub Adapter_Connected (Powodzenie As Boolean)
+
+ Flaga=Powodzenie
+ Timer1.Enabled=True
+  If Flaga=True Then 
+
+  TextWriter1.Initialize(Adapter.OutputStream)
+
+ End If
+
+End Sub
+Sub Button1_Down
+	'Do przodu
+	znak = "f"
+	Timer3.Enabled = True
+End Sub
+
+Sub Button1_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+
+Sub Button2_Down
+	'W lewo
+	znak = "l"
+	Timer3.Enabled = True
+End Sub
+
+Sub Button2_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+
+Sub Button3_Down
+	'W prawo
+	znak = "r"
+	Timer3.Enabled = True
+End Sub
+
+Sub Button3_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+
+Sub Button4_Down
+	'Do tylu
+	znak = "b"
+	Timer3.Enabled = True
+End Sub
+
+Sub Button4_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+
+Sub Button5_Down
+'podnosisz
+	znak = "u"
+	Timer3.Enabled = True
+End Sub
+
+Sub Button5_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+
+Sub Button6_Down
+	'Chwytanie
+	znak = "g"
+	Timer3.Enabled = True
+End Sub
+
+Sub Button6_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+
+Sub Button7_Down
+	'puszczasz
+	znak = "p"
+	Timer3.Enabled = True
+End Sub
+
+Sub Button7_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+
+Sub Button8_Down
+'opuszczasz
+znak = "d"
+Timer3.Enabled = True
+End Sub
+
+Sub Button8_Up
+znak="s"
+'Timer3.Enabled = False
+End Sub
+Sub SeekBar1_ValueChanged (Value As Int, UserChanged As Boolean)
+	Label1.Text=(SeekBar1.Value/255*100)&"%"
+	Button9.Enabled=True
+End Sub
+Sub CheckBox1_CheckedChange(Checked As Boolean)
+If CheckBox1.Checked=True Then
+   CheckBox2.Checked=False
+    Button1.Visible=True
+	Button1.Enabled=True
+	Button2.Visible=True
+	Button2.Enabled=True
+	Button3.Visible=True
+	Button3.Enabled=True
+	Button4.Visible=True
+	Button4.Enabled=True
+	SeekBar1.Visible=True
+	SeekBar1.Enabled=True
+	Label1.visible=True
+	Button9.visible=True
+	
+	'dodatkowe guziki na false
+	Button5.Visible=False
+	Button5.Enabled=False
+	Button6.Visible=False
+	Button6.Enabled=False
+	Button7.Visible=False
+	Button7.Enabled=False
+	Button8.Visible=False
+	Button8.Enabled=False
+  Else
+   CheckBox2.Checked=True
+  End If
+End Sub
+Sub CheckBox2_CheckedChange(Checked As Boolean)
+	If CheckBox2.Checked=True Then
+   CheckBox1.Checked=False
+   Button1.Visible=False
+   Button1.Enabled=False
+	Button2.Visible=False
+	Button2.Enabled=False
+	Button3.Visible=False
+	Button3.Enabled=False
+	Button4.Visible=False
+	Button4.Enabled=False
+	SeekBar1.Enabled=False
+	SeekBar1.Visible=False
+	Label1.visible=False
+	Button9.visible=False
+	'dodatkowe guziki na true
+	Button5.Visible=True
+	Button5.Enabled=True
+	Button6.Visible=True
+	Button6.Enabled=True
+	Button7.Visible=True
+	Button7.Enabled=True
+	Button8.Visible=True
+	Button8.Enabled=True
+	
+  Else
+   CheckBox1.Checked=True
+  End If
+End Sub
+Sub CheckBox3_CheckedChange(Checked As Boolean)
+If CheckBox3.Checked=True Then
+   Adapter.Connect("00:12:10:23:07:11")
+  Else
+  Adapter.Disconnect
+  End If
+End Sub
+
+Sub Button9_Click
+	If Flaga=True Then
+	Timer3.Enabled = False
+  Try
+   TextWriter1.Write("c")
+   TextWriter1.Flush
+   Msgbox((SeekBar1.Value),"Zmiana")
+   TextWriter1.Write(Chr(SeekBar1.Value/2))
+   TextWriter1.Flush
+  Catch
+   Flaga=False
+  End Try
+  Button9.Enabled=False
+  Timer3.Enabled = True
+ End If
+End Sub
