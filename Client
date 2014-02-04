@@ -1,0 +1,276 @@
+Imports System
+Imports System.IO.Ports
+Imports System.ComponentModel
+Imports System.Runtime.InteropServices
+Imports Microsoft.Win32
+Imports System.Net.Sockets
+Imports System.Text
+
+Public Class Form1
+
+    Dim znak As Char
+    Dim polaczenie As Boolean = True
+    Dim rozmiarobrazka As Integer
+    Dim odbieraj As Boolean = False
+
+    'Transmisja przez neta
+    Dim clientSocket As New System.Net.Sockets.TcpClient()
+    Dim clientSocket2 As New System.Net.Sockets.TcpClient()
+    Dim serverStream As NetworkStream
+    Dim zakonczono As System.IAsyncResult
+    'koniec neta
+
+    Private Sub ProgramToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ProgramToolStripMenuItem.Click
+        Panel1.Top = 27 'Klikniecie na program
+        Panel1.Left = 12
+        Panel1.Visible = True
+        Panel2.Visible = False
+    End Sub
+
+    Private Sub SterowanieToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles SterowanieToolStripMenuItem.Click
+        Panel2.Top = 27
+        Panel2.Left = 12
+        Panel2.Visible = True
+        Panel1.Visible = False
+    End Sub
+
+    Private Sub Button9_Click(sender As Object, e As EventArgs) Handles Button9.Click
+        'polacz
+
+
+        If polaczenie Then
+            clientSocket.Connect(TextBox2.Text, 1078)
+            clientSocket2.Connect(TextBox2.Text, 1028)
+            If clientSocket.Connected Then
+                Button9.Text = "Rozlacz"
+                polaczenie = False
+                Label3.Text = "Polaczono"
+                wlaczprzyciski()
+                ' Timer2.Enabled = True
+            Else
+                Label3.Text = "Nie polaczono"
+                polaczenie = True
+            End If
+        Else
+            wylaczprzyciski()
+            Timer1.Enabled = False
+            Timer2.Enabled = False
+            Dim serverStream As NetworkStream = clientSocket.GetStream()
+            Dim outStream As Byte() = _
+            System.Text.Encoding.ASCII.GetBytes("rozlacz$")
+            serverStream.Write(outStream, 0, outStream.Length)
+            serverStream.Flush()
+            clientSocket.Close()
+            clientSocket2.Close()
+            Label3.Text = "Rozlaczono"
+            Button9.Text = "Polacz"
+            polaczenie = True
+        End If
+
+    End Sub
+
+    Private Sub Button5_MouseDown(sender As Object, e As MouseEventArgs) Handles Button5.MouseDown
+        znak = "u"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button5_MouseUp(sender As Object, e As MouseEventArgs) Handles Button5.MouseUp
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button7_MouseDown(sender As Object, e As MouseEventArgs) Handles Button7.MouseDown
+        znak = "g"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button7_MouseUp(sender As Object, e As MouseEventArgs) Handles Button7.MouseUp
+
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button6_MouseDown(sender As Object, e As MouseEventArgs) Handles Button6.MouseDown
+
+        znak = "d"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button6_MouseUp(sender As Object, e As MouseEventArgs) Handles Button6.MouseUp
+
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button8_MouseDown(sender As Object, e As MouseEventArgs) Handles Button8.MouseDown
+
+        znak = "p"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button8_MouseUp(sender As Object, e As MouseEventArgs) Handles Button8.MouseUp
+
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button1_MouseDown(sender As Object, e As MouseEventArgs) Handles Button1.MouseDown
+
+        znak = "f"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button1_MouseUp(sender As Object, e As MouseEventArgs) Handles Button1.MouseUp
+
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button4_MouseDown(sender As Object, e As MouseEventArgs) Handles Button4.MouseDown
+
+        znak = "b"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button4_MouseUp(sender As Object, e As MouseEventArgs) Handles Button4.MouseUp
+
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button2_MouseDown(sender As Object, e As MouseEventArgs) Handles Button2.MouseDown
+
+        znak = "l"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button2_MouseUp(sender As Object, e As MouseEventArgs) Handles Button2.MouseUp
+
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button3_MouseDown(sender As Object, e As MouseEventArgs) Handles Button3.MouseDown
+
+        znak = "r"
+        Timer1.Enabled = True
+    End Sub
+
+    Private Sub Button3_MouseUp(sender As Object, e As MouseEventArgs) Handles Button3.MouseUp
+
+        znak = "s"
+        Timer1.Enabled = True
+    End Sub
+
+    'Private Sub TrackBar1_ValueChanged(sender As Object, e As EventArgs)
+    '    Label2.Text = (TrackBar1.Value / 255 * 100) & "%"
+    'End Sub
+
+    Public Function ByteArray2Image(ByVal ByAr() As Byte) As Image
+        Dim img As Image
+        Dim MS2 As New IO.MemoryStream(ByAr)
+
+        'das TRY ist Notwending, da wenn ein ARRAY eingelesen wird, welches KEIN Bild war,
+        'eine Exception auftritt!
+        Try
+            img = Image.FromStream(MS2) ' zapisuje obrazek z strumienia
+        Catch ex As Exception
+            Return Nothing
+        End Try
+
+        Return img  'zwraca obrazek
+    End Function
+
+    Private Sub Timer1_Tick(sender As Object, e As EventArgs) Handles Timer1.Tick
+        Dim serverStream As NetworkStream = clientSocket.GetStream()
+
+        Dim outStream As Byte() = _
+        System.Text.Encoding.ASCII.GetBytes(znak & "$")
+        serverStream.Write(outStream, 0, outStream.Length)
+        serverStream.Flush()
+
+        Dim obrazim As Image
+        Dim gr As Graphics
+        ' Dim serverStream As NetworkStream = clientSocket.GetStream()
+        Dim obrazbyte() As Byte
+        rozmiarobrazka = 307254
+        ReDim obrazbyte(rozmiarobrazka)
+
+        Try
+            Dim networkStream As NetworkStream = _
+                clientSocket2.GetStream()        'przechwytuje stream
+            networkStream.Read(obrazbyte, 0, rozmiarobrazka) 'Czyta ze stream(tekst(bity), 0, rozmiar tekstu
+        Catch ex As Exception
+            Label3.Text = "ERROR"
+            ' Return Nothing
+
+        End Try
+
+        obrazim = ByteArray2Image(obrazbyte)
+        If IsNothing(obrazim) Then
+        Else
+            gr = PictureBox1.CreateGraphics()
+            gr.DrawImage(obrazim, 0, 0)
+        End If
+    End Sub
+    Private Sub wlaczprzyciski()
+        Button1.Enabled = True
+        Button2.Enabled = True
+        Button3.Enabled = True
+        Button4.Enabled = True
+        Button5.Enabled = True
+        Button6.Enabled = True
+        Button7.Enabled = True
+        Button8.Enabled = True
+        Button10.Enabled = True
+        '   TrackBar1.Enabled = True
+    End Sub
+    Private Sub wylaczprzyciski()
+        Button1.Enabled = False
+        Button2.Enabled = False
+        Button3.Enabled = False
+        Button4.Enabled = False
+        Button5.Enabled = False
+        Button6.Enabled = False
+        Button7.Enabled = False
+        Button8.Enabled = False
+        Button10.Enabled = False
+        '   TrackBar1.Enabled = False
+    End Sub
+
+   
+    Private Sub Timer2_Tick(sender As Object, e As EventArgs) Handles Timer2.Tick
+
+        Dim obrazim As Image
+        Dim gr As Graphics
+        ' Dim serverStream As NetworkStream = clientSocket.GetStream()
+        Dim obrazbyte() As Byte
+        rozmiarobrazka = 307254
+        ReDim obrazbyte(rozmiarobrazka)
+
+        Try
+            Dim networkStream As NetworkStream = _
+                clientSocket2.GetStream()        'przechwytuje stream
+            networkStream.Read(obrazbyte, 0, rozmiarobrazka) 'Czyta ze stream(tekst(bity), 0, rozmiar tekstu
+        Catch ex As Exception
+            Label3.Text = "ERROR"
+            ' Return Nothing
+
+        End Try
+
+        obrazim = ByteArray2Image(obrazbyte)
+        If IsNothing(obrazim) Then
+        Else
+            gr = PictureBox1.CreateGraphics()
+            gr.DrawImage(obrazim, 0, 0)
+        End If
+    End Sub
+
+    Private Sub Button10_Click(sender As Object, e As EventArgs) Handles Button10.Click
+        ' clientSocket2.Connect(TextBox2.Text, 8887)
+        If clientSocket2.Connected Then
+            Label1.Text = "Wlaczono"
+            Timer2.Enabled = True
+        End If
+    End Sub
+End Class
